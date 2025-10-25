@@ -21,6 +21,7 @@ dependencies = [
   "ujson>=5.0.0",
   "numpy>=1.21.0",
   "opencv-python",
+  "ps3-torch",
   "chardet",
   "decord",
   "liger-kernel",
