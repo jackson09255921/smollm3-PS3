@@ -209,14 +209,20 @@ def prepare_model(
         model_cls = SmolLMMForConditionalGeneration
         logger.info(f"Using frame emmbedding averaging of {model_args.frames_per_clip} frames")
     else:
-        from smolvlm.model.modeling_smolvlm import SmolVLMForConditionalGeneration
-        model_cls = SmolVLMForConditionalGeneration
+        # from smolvlm.model.modeling_smolvlm import SmolVLMForConditionalGeneration
+        # model_cls = SmolVLMForConditionalGeneration
+
+        from smolvlm.model.modeling_smolvlm_ps3 import MyPS3VLMForConditionalGeneration
+        model_cls = MyPS3VLMForConditionalGeneration
+        logger.info(f"正在載入客製化模型: MyPS3VLMForConditionalGeneration (PS3 版本)")
+
     
     model = model_cls.from_pretrained(
         model_args.model_name_or_path,
         torch_dtype=compute_dtype,
         config = config,
         **bnb_args,
+        # ignore_mismatched_sizes=True # 如果載入 Idefics3 權重時報錯，可以加上這行
     )
 
     return model
@@ -320,11 +326,16 @@ def train():
 
     # 4) Possibly apply LoRA/PEFT
     if training_args.peft_enable:
-        model = apply_peft_if_needed(model, training_args)
+        # model = apply_peft_if_needed(model, training_args)
+        # 確保 'apply_peft_if_needed' 存在，或者使用 'apply_peft'
+        # 假設函式名稱為 apply_peft (如 train.py 原始碼所示)
+        model = apply_peft(model, training_args)
 
     # 5) Load processor (tokenizer + image processor, etc.)
     #import ipdb; ipdb.set_trace()
-    logger.info("Loading AutoProcessor from %s", model_args.model_name_or_path)
+    # logger.info("Loading AutoProcessor from %s", model_args.model_name_or_path)
+    logger.info("正在載入 Idefics3Processor 並手動替換為 PS3ImageProcessor...")
+
     if model_args.frames_per_clip > 1:
         from smolvlm.model.processing_smollmm import SmolLMMProcessor
         processor = SmolLMMProcessor.from_pretrained(
@@ -335,13 +346,38 @@ def train():
             trust_remote_code=model_args.trust_remote_code,
         )
     else:
-        processor = AutoProcessor.from_pretrained(
+        from ps3 import PS3ImageProcessor
+        from transformers import Idefics3Processor
+
+        PS3_MODEL_ID = "nvidia/PS3-4K-SigLIP2"
+
+        processor = Idefics3Processor.from_pretrained(
             model_args.model_name_or_path,
             cache_dir=training_args.cache_dir,
             model_max_length=training_args.model_max_length,
             padding_side=model_args.padding_side,
             trust_remote_code=model_args.trust_remote_code,
         )
+
+        # 載入 *PS3* 專用的 image processor
+        ps3_image_processor = PS3ImageProcessor.from_pretrained(
+            PS3_MODEL_ID,
+            cache_dir=training_args.cache_dir,
+        )
+        logger.info(f"已從 {PS3_MODEL_ID} 載入 PS3 Image Processor。")
+
+        # 將 processor 內部的 image_processor 替換為 PS3 的版本
+        processor.image_processor = ps3_image_processor
+        logger.info("成功將 Processor 內部的 image_processor 替換為 PS3 版本。")
+
+
+        # processor = AutoProcessor.from_pretrained(
+        #     model_args.model_name_or_path,
+        #     cache_dir=training_args.cache_dir,
+        #     model_max_length=training_args.model_max_length,
+        #     padding_side=model_args.padding_side,
+        #     trust_remote_code=model_args.trust_remote_code,
+        # )
 
     # 6) Build dataset + collator
     logger.info("Building dataset + collator...")
