@@ -221,6 +221,7 @@ def prepare_model(
         model_args.model_name_or_path,
         torch_dtype=compute_dtype,
         config = config,
+        trust_remote_code=model_args.trust_remote_code,
         **bnb_args,
         # ignore_mismatched_sizes=True # 如果載入 Idefics3 權重時報錯，可以加上這行
     )
@@ -298,14 +299,29 @@ def train():
     set_seed(training_args.seed)
     
     # Initialize wandb only on the main process (global rank 0) if wandb logging is enabled
-    if "wandb" in training_args.report_to and training_args.local_rank == 0 and dist.get_rank() == 0:
-        os.environ["WANDB_PROJECT"] = "smolvlmvideo"  # Set project name
-        wandb.init(
-            name=training_args.run_name,
-            config=training_args.to_dict(),
-        )
-        # Ensure other processes will not try to log
-        os.environ["WANDB_MODE"] = "offline"
+    if "wandb" in training_args.report_to:
+        
+        # [!!] 這是我們的安全檢查：
+        # 檢查我們是否是「全域主進程」 (global main process)
+        is_global_main_process = False
+        if not dist.is_initialized():
+            # 情況 1: 根本沒有用分散式 (例如: 'python train.py')，所以我們就是主進程
+            is_global_main_process = True
+        elif dist.get_rank() == 0:
+            # 情況 2: 已經用了分散式 (例如: 'torchrun')，且我們是 Rank 0
+            is_global_main_process = True
+
+        if is_global_main_process:
+            logger.info("Initializing wandb for main process...")
+            os.environ["WANDB_PROJECT"] = "smolvlmvideo"  # Set project name
+            wandb.init(
+                name=training_args.run_name,
+                config=training_args.to_dict(),
+            )
+        else:
+            # 這是在分散式環境中，但不是 Rank 0 的進程
+            logger.info(f"Setting WANDB_MODE=offline for rank {dist.get_rank()}")
+            os.environ["WANDB_MODE"] = "offline"
 
 
     # Possibly set tune flags automatically based on user-provided LR

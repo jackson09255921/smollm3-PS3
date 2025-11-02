@@ -1,0 +1,8 @@
+accelerate 
+datasets 
+peft 
+bitsandbytes 
+tensorboard 
+av 
+num2words
+ps3-torch

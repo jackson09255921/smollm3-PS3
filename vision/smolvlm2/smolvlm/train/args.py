@@ -16,7 +16,7 @@ class ModelArguments:
         metadata={"help": "Path to pretrained model or model identifier."}
     )
     trust_remote_code: bool = field(
-        default=False, 
+        default=True, 
         metadata={"help": "Allow custom code from the model repo."}
     )
     padding_side: str = field(

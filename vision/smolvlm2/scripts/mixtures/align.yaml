@@ -1,0 +1,10 @@
+- _comment: # Projector 預訓練資料 (595K)
+  category: Projector
+  name: Projector-Pretrain-595K
+  json_path: C:/Users/HankWang.DESKTOP-VFUI6TF/Desktop/smollm3-PS3/dataset
+  modality: image
+  name: llava-cc3m-pretrain-595k
+  path: llava-cc3m
+  quality: '4'
+  sampling_strategy: random:100.00%
+  source: llava-cc3m

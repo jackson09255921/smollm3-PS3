@@ -1,3 +1,21 @@
+# --- VLM / ML 專案客製化規則 (Project-specific rules) ---
+#
+# 忽略您在 `git status` 中看到的訓練輸出資料夾
+vision/finetuning/SmolVLM-Base-vqav2/
+
+# 忽略 `git status` 中看到的 llava 資料夾 (這看起來像下載的套件)
+llava/
+
+# 忽略 TensorBoard 日誌 (我們之前討論過的)
+runs/
+
+# (可選) 這是一個更通用的規則，可以匹配未來所有 -vqav2 結尾的訓練資料夾
+# *-vqav2/
+
+# -----------------------------------
+# 以下是您提供的標準 Python 範本
+# -----------------------------------
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
